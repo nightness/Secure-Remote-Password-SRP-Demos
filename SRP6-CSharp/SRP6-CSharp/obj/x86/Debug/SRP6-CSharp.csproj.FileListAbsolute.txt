@@ -1,0 +1,4 @@
+D:\Users\Josh Guyette\Desktop\SRP6\SRP6-CSharp\SRP6-CSharp\bin\Debug\SRP6.exe
+D:\Users\Josh Guyette\Desktop\SRP6\SRP6-CSharp\SRP6-CSharp\bin\Debug\SRP6.pdb
+D:\Users\Josh Guyette\Desktop\SRP6\SRP6-CSharp\SRP6-CSharp\obj\x86\Debug\SRP6.exe
+D:\Users\Josh Guyette\Desktop\SRP6\SRP6-CSharp\SRP6-CSharp\obj\x86\Debug\SRP6.pdb
