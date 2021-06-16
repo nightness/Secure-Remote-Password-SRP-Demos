@@ -1,0 +1,19 @@
+{
+    "name": "srp6-typescript",
+    "version": "1.0.0",
+    "description": "",
+    "main": "srp6.js",
+    "scripts": {
+        "test": "tsc && node srp6.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "big-integer": "^1.6.48",
+        "sha1": "^1.1.1"
+    },
+    "devDependencies": {
+        "@types/node": "^15.12.2",
+        "@types/sha1": "^1.1.2"
+    }
+}
