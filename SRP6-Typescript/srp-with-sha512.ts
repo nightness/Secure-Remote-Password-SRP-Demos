@@ -1,4 +1,4 @@
-import { sha256 } from 'js-sha256';
+import { sha512 } from 'js-sha512';
 import bigInt = require('big-integer')
 import { BigInteger } from 'big-integer'
 
@@ -87,7 +87,7 @@ class SRP6Server extends SRP6Base {
         this.scrambler = newRandomBigInt(scramblerBits)
 
         // Server-side variables
-        const hash = sha256(`${this.salt.toString(16)}${user}:${password}`)
+        const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
         this.identityHash = bigInt(hash, 16)
         this.sVerifier = this.generator_g.modPow(this.identityHash, this.modulus_N)
 
@@ -141,7 +141,7 @@ class SRP6Client extends SRP6Base {
         this.publicKey = this.generator_g.modPow(this.privateKey, this.modulus_N)
 
         // Identity Hash
-        const hash = sha256(`${this.salt.toString(16)}${user}:${password}`)
+        const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
         this.identityHash = bigInt(hash, 16)
     }
 
