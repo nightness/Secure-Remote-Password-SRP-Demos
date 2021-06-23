@@ -56,7 +56,7 @@ class SRP6Base {
     }
 
     public getGenerator() {
-        this.generator_g
+        return this.generator_g
     }
 
     public getScrambler() {
@@ -184,6 +184,7 @@ console.log('')
 console.log('ClientPrivateKey (a) = ', srpClient.getPrivateKey())
 console.log('ClientPublicKey (A)= ', srpClient.getPublicKey())
 console.log('ClientIdentityHash (x) = ', srpClient.getIdentityHash())
+console.log('Generator = ', srpClient.getGenerator())
 console.log('')
 console.log('ServerSessionKey = ', srpServer.getSessionKey())
 console.log('ClientSessionKey = ', srpClient.getSessionKey())
