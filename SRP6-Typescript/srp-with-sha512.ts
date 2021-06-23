@@ -159,34 +159,35 @@ class SRP6Client extends SRP6Base {
     }
 }
 
+// Must be a prime number
 const modulus = '115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3'
 
-const srpServer = new SRP6Server('TEST', 'test', modulus, 2, 256, 128)
+const srpServer = new SRP6Server('TEST', 'test', modulus, 2, 512, 256)
 const srpClient = new SRP6Client('TEST', 'test', modulus, 2, srpServer.getSalt())
 
-// This is the information that would normally be exchanged over
-// the network connection
+// This is the information that would normally be exchanged over the network connection
 srpServer.setSessionKey(srpClient.getPublicKey())
 srpClient.setSessionKey(srpServer.getPublicKey(), srpServer.getScrambler())
 
+
 console.log('=== SRP6 Demo Started ===')
-console.log('Modulus = ', srpServer.getModulus())
-console.log('Multiplier = ', srpServer.getMultiplier())
-console.log('Generator = ', srpServer.getGenerator())
-console.log('Salt = ', srpServer.getSalt())
-console.log('IdentityHash = ', srpServer.getIdentityHash())
-console.log('Verifier = ', srpServer.getVerifier())
+console.log('Modulus =', srpServer.getModulus())
+console.log('Multiplier =', srpServer.getMultiplier())
+console.log('Generator= ', srpServer.getGenerator())
+console.log('Salt =', srpServer.getSalt())
+console.log('IdentityHash =', srpServer.getIdentityHash())
+console.log('Verifier =', srpServer.getVerifier())
 console.log('')
-console.log('ServerPrivateKey (b)= ', srpServer.getPrivateKey())
-console.log('ServerPublicKey (B)= ', srpServer.getPublicKey())
-console.log('Scrambler (u)= ', srpServer.getScrambler())
+console.log('ServerPrivateKey (b) =', srpServer.getPrivateKey())
+console.log('ServerPublicKey (B) = ', srpServer.getPublicKey())
+console.log('Scrambler (u)=', srpServer.getScrambler())
 console.log('')
-console.log('ClientPrivateKey (a) = ', srpClient.getPrivateKey())
-console.log('ClientPublicKey (A)= ', srpClient.getPublicKey())
-console.log('ClientIdentityHash (x) = ', srpClient.getIdentityHash())
+console.log('ClientPrivateKey (a) =', srpClient.getPrivateKey())
+console.log('ClientPublicKey (A)=', srpClient.getPublicKey())
+console.log('ClientIdentityHash (x) =', srpClient.getIdentityHash())
 console.log('')
-console.log('ServerSessionKey = ', srpServer.getSessionKey())
-console.log('ClientSessionKey = ', srpClient.getSessionKey())
+console.log('ServerSessionKey =', srpServer.getSessionKey())
+console.log('ClientSessionKey =', srpClient.getSessionKey())
 console.log('')
 const passed = srpServer.getSessionKey().equals(srpClient.getSessionKey())
 console.log(`Test Results: ${passed ? 'PASSED!' : 'FAILED!'}`)
