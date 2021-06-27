@@ -139,7 +139,6 @@ class SRP6Client extends SecureRemotePasswordBase {
 
         assert(this.multiplier_k > bigInt.zero)
         assert(this.generator_g > bigInt.zero)
-        assert(this.scrambler > bigInt.zero)
         assert(this.modulus_N > bigInt.zero)
         assert(this.salt > bigInt.zero)
 
