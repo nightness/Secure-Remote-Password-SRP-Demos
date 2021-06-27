@@ -137,6 +137,13 @@ class SRP6Client extends SecureRemotePasswordBase {
         this.salt = salt
         this.sessionKey = bigInt.zero
 
+        assert(this.multiplier_k > bigInt.zero)
+        assert(this.generator_g > bigInt.zero)
+        assert(this.scrambler > bigInt.zero)
+        assert(this.modulus_N > bigInt.zero)
+        assert(this.salt > bigInt.zero)
+
+
         this.privateKey = newRandomBigInt(128)
         // g^a   (mod N)
         this.publicKey = this.generator_g.modPow(this.privateKey, this.modulus_N)
