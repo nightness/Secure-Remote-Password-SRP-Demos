@@ -1,6 +1,7 @@
 import { sha512 } from 'js-sha512';
 import bigInt = require('big-integer')
 import { BigInteger } from 'big-integer'
+import { assert } from 'console';
 
 function newRandomBigInt(bitLength: number) {
     let text = ''
@@ -9,27 +10,18 @@ function newRandomBigInt(bitLength: number) {
     return bigInt(text, 2)
 }
 
-class SRP6Base {
+class SecureRemotePasswordBase {
     // Common variables
-    protected sessionKey: BigInteger
-    protected privateKey: BigInteger
-    protected publicKey: BigInteger
-    protected salt: BigInteger
-    protected multiplier_k: BigInteger
-    protected identityHash: BigInteger
-    protected generator_g: BigInteger
-    protected scrambler: BigInteger
+    protected sessionKey = bigInt.zero
+    protected privateKey = bigInt.zero
+    protected publicKey = bigInt.zero
+    protected salt = bigInt.zero
+    protected multiplier_k = bigInt.zero
+    protected identityHash = bigInt.zero
+    protected generator_g = bigInt.zero
+    protected scrambler = bigInt.zero
 
-    constructor() {
-        this.privateKey = bigInt.zero
-        this.publicKey = bigInt.zero
-        this.sessionKey = bigInt.zero
-        this.salt = bigInt.zero
-        this.multiplier_k = bigInt('3')
-        this.identityHash = bigInt.zero
-        this.generator_g = bigInt.zero
-        this.scrambler = bigInt.zero
-    }
+    constructor() {}
 
     public getPublicKey() {
         return this.publicKey
@@ -64,7 +56,7 @@ class SRP6Base {
     }
 }
 
-class SRP6Server extends SRP6Base {
+class SRP6Server extends SecureRemotePasswordBase {
     // Constructor initialized variables
     private modulus_N: BigInteger
 
@@ -81,10 +73,17 @@ class SRP6Server extends SRP6Base {
         scramblerBits: number
     ) {
         super()
+        this.multiplier_k = bigInt('3') //SRP6 constant
         this.modulus_N = bigInt(modulus_N, 16)
         this.generator_g = bigInt(generator_g)
         this.salt = newRandomBigInt(saltBits)
         this.scrambler = newRandomBigInt(scramblerBits)
+
+        assert(this.multiplier_k > bigInt.zero)
+        assert(this.generator_g > bigInt.zero)
+        assert(this.scrambler > bigInt.zero)
+        assert(this.modulus_N > bigInt.zero)
+        assert(this.salt > bigInt.zero)
 
         // Server-side variables
         const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
@@ -93,6 +92,7 @@ class SRP6Server extends SRP6Base {
 
         // Keys
         this.privateKey = newRandomBigInt(128)
+
         // kv + g^b   (mod N)
         this.publicKey = this.multiplier_k
             .multiply(this.sVerifier)
@@ -118,7 +118,7 @@ class SRP6Server extends SRP6Base {
     }
 }
 
-class SRP6Client extends SRP6Base {
+class SRP6Client extends SecureRemotePasswordBase {
     // Constructor initialized variables
     private modulus_N: BigInteger
 
@@ -131,6 +131,7 @@ class SRP6Client extends SRP6Base {
         salt: BigInteger
     ) {
         super()
+        this.multiplier_k = bigInt('3') //SRP6 constant
         this.modulus_N = bigInt(modulus_N, 16)
         this.generator_g = bigInt(generator_g)
         this.salt = salt
@@ -162,7 +163,7 @@ class SRP6Client extends SRP6Base {
 // Must be a prime number
 const modulus = '115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3'
 
-const srpServer = new SRP6Server('TEST', 'test', modulus, 2, 512, 256)
+const srpServer = new SRP6Server('TEST', 'test', modulus, 2, 256, 128)
 const srpClient = new SRP6Client('TEST', 'test', modulus, 2, srpServer.getSalt())
 
 // This is the information that would normally be exchanged over the network connection
