@@ -79,11 +79,11 @@ class SRP6Server extends SecureRemotePasswordBase {
         this.salt = newRandomBigInt(saltBits)
         this.scrambler = newRandomBigInt(scramblerBits)
 
-        assert(this.multiplier_k > bigInt.zero)
-        assert(this.generator_g > bigInt.zero)
-        assert(this.scrambler > bigInt.zero)
-        assert(this.modulus_N > bigInt.zero)
-        assert(this.salt > bigInt.zero)
+        assert(this.scrambler > bigInt.zero, 'scrambler equals zero')
+        assert(this.multiplier_k > bigInt.zero, 'multiplier_k equals zero')
+        assert(this.generator_g > bigInt.zero, 'generator_g equals zero')
+        assert(this.modulus_N > bigInt.zero, 'modulus_N equals zero')
+        assert(this.salt > bigInt.zero, 'salt equals zero')
 
         // Server-side variables
         const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
@@ -137,10 +137,10 @@ class SRP6Client extends SecureRemotePasswordBase {
         this.salt = salt
         this.sessionKey = bigInt.zero
 
-        assert(this.multiplier_k > bigInt.zero)
-        assert(this.generator_g > bigInt.zero)
-        assert(this.modulus_N > bigInt.zero)
-        assert(this.salt > bigInt.zero)
+        assert(this.multiplier_k > bigInt.zero, 'multiplier_k equals zero')
+        assert(this.generator_g > bigInt.zero, 'generator_g equals zero')
+        assert(this.modulus_N > bigInt.zero, 'modulus_N equals zero')
+        assert(this.salt > bigInt.zero, 'salt equals zero')
 
 
         this.privateKey = newRandomBigInt(128)
