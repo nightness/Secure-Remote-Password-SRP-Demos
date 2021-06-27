@@ -1,4 +1,5 @@
-import { sha512 } from 'js-sha512';
+import { sha256 as sha } from 'js-sha256'
+//import { sha512 as sha } from 'js-sha512'
 import bigInt = require('big-integer')
 import { BigInteger } from 'big-integer'
 import { assert } from 'console';
@@ -86,12 +87,12 @@ class SRP6Server extends SecureRemotePasswordBase {
         assert(this.salt > bigInt.zero, 'salt invalid')
 
         // Server-side variables
-        const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
+        const hash = sha(`${this.salt.toString(16)}${user}:${password}`)
         this.identityHash = bigInt(hash, 16)
         this.sVerifier = this.generator_g.modPow(this.identityHash, this.modulus_N)
 
         // Keys
-        this.privateKey = newRandomBigInt(128)
+        this.privateKey = newRandomBigInt(256)
 
         // kv + g^b   (mod N)
         this.publicKey = this.multiplier_k
@@ -148,7 +149,7 @@ class SRP6Client extends SecureRemotePasswordBase {
         this.publicKey = this.generator_g.modPow(this.privateKey, this.modulus_N)
 
         // Identity Hash
-        const hash = sha512(`${this.salt.toString(16)}${user}:${password}`)
+        const hash = sha(`${this.salt.toString(16)}${user}:${password}`)
         this.identityHash = bigInt(hash, 16)
     }
 
@@ -169,8 +170,8 @@ class SRP6Client extends SecureRemotePasswordBase {
 // Must be a prime number
 const modulus = '115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3'
 
-const srpServer = new SRP6Server('TEST', 'test', modulus, 2, 256, 128)
-const srpClient = new SRP6Client('TEST', 'test', modulus, 2, srpServer.getSalt())
+const srpServer = new SRP6Server('TEST', 'test', modulus, 420, 256, 128)
+const srpClient = new SRP6Client('TEST', 'test', modulus, 420, srpServer.getSalt())
 
 // This is the information that would normally be exchanged over the network connection
 srpServer.setSessionKey(srpClient.getPublicKey())
