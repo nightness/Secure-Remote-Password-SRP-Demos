@@ -5,12 +5,7 @@ extern crate num_bigint;
 use num_traits::Zero;
 use num_bigint::{BigUint, RandBigInt};
 use sha2::{Digest, Sha256};
-
-fn new_random_uint(bit_length: u16) -> BigUint {
-    let mut rng = rand::thread_rng();
-    let random_bits = rng.gen_biguint(bit_length as u64);
-    random_bits
-}
+use rand::thread_rng;
 
 struct SRP6Base {
     session_key: BigUint,
@@ -88,8 +83,9 @@ impl SRP6Server {
         let mut base = SRP6Base::new();
         let modulus_n = BigUint::parse_bytes(modulus_n.as_bytes(), 16).unwrap();
         base.generator_g = BigUint::from(generator_g);
-        base.salt = new_random_uint(salt_bits);
-        base.scrambler = new_random_uint(scrambler_bits);
+        let mut rng = thread_rng();
+        base.salt = rng.gen_biguint(salt_bits as u64);
+        base.scrambler = rng.gen_biguint(scrambler_bits as u64);
 
         let salt_hex = base.salt.to_str_radix(16);
         let hash_input = format!("{}{}:{}", salt_hex, user, password);
@@ -105,7 +101,8 @@ impl SRP6Server {
             .generator_g
             .modpow(&base.identity_hash, &modulus_n);
 
-        base.private_key = new_random_uint(128);
+        let mut rng = thread_rng();
+        base.private_key = rng.gen_biguint(128);
 
         let public_key = &base
             .multiplier_k
@@ -155,10 +152,12 @@ impl SRP6Client {
         let mut base = SRP6Base::new();
         let modulus_n = BigUint::parse_bytes(modulus_n.as_bytes(), 16).unwrap();
         base.generator_g = BigUint::from(generator_g);
+
         base.salt = salt.clone();
         base.session_key = BigUint::zero();
-
-        base.private_key = new_random_uint(128);         
+        
+        let mut rng = thread_rng();
+        base.private_key = rng.gen_biguint(128);
 
         let public_key = base.generator_g.modpow(&base.private_key, &modulus_n);
         base.public_key = public_key;
