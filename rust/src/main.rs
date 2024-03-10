@@ -1,14 +1,15 @@
-extern crate sha2;
-extern crate rand;
 extern crate num_bigint;
+extern crate rand;
+extern crate sha2;
 
 mod srp {
-    use num_traits::Zero;
     use num_bigint::{BigUint, RandBigInt};
-    use sha2::{Digest, Sha256};
+    use num_traits::Zero;
     use rand::thread_rng;
+    use sha2::{Digest, Sha256};
 
     struct Base {
+        modulus_n: BigUint,
         session_key: BigUint,
         private_key: BigUint,
         public_key: BigUint,
@@ -20,24 +21,53 @@ mod srp {
     }
 
     impl Base {
-        pub fn new() -> Base {
+        pub fn new(modulus_n: &str, multiplier_k: u32, generator_g: u32, key_size: u16) -> Base {
+            let modulus_n = BigUint::parse_bytes(modulus_n.as_bytes(), 16).unwrap();
+            let generator_g = BigUint::from(generator_g);
+            let multiplier_k = BigUint::from(multiplier_k);
+            let mut rng = thread_rng();
+            let private_key = rng.gen_biguint(key_size as u64);
+
             Base {
+                modulus_n,
                 session_key: BigUint::zero(),
-                private_key: BigUint::zero(),
+                private_key,
                 public_key: BigUint::zero(),
                 salt: BigUint::zero(),
-                multiplier_k: BigUint::from(3u32),
+                multiplier_k,
                 identity_hash: BigUint::zero(),
-                generator_g: BigUint::zero(),
+                generator_g,
                 scrambler: BigUint::zero(),
             }
+        }
+
+        pub fn set_salt(&mut self, salt: &BigUint) {
+            self.salt = salt.clone();
+        }
+
+        pub fn generate_salt(&mut self, bits: u16) {
+            let mut rng = thread_rng();
+            self.salt = rng.gen_biguint(bits as u64);
+        }
+
+        pub fn generate_scrambler(&mut self, bits: u16) {
+            let mut rng = thread_rng();
+            self.scrambler = rng.gen_biguint(bits as u64);
+        }
+
+        pub fn compute_identity_hash(&mut self, user: &str, password: &str) {
+            let salt_hex = self.salt.to_str_radix(16);
+            let hash_input = format!("{}{}:{}", salt_hex, user, password);
+            let mut hash = Sha256::new();
+            hash.update(hash_input.as_bytes());
+            let hash_result = hash.finalize();
+            self.identity_hash = BigUint::from_bytes_be(&hash_result);
         }
     }
 
     pub struct Server {
         base: Base,
-        pub modulus_n: BigUint,
-        pub s_verifier: BigUint,
+        s_verifier: BigUint,
     }
 
     impl Server {
@@ -45,51 +75,33 @@ mod srp {
             user: &str,
             password: &str,
             modulus_n: &str,
+            multiplier_k: u32,
             generator_g: u32,
             salt_bits: u16,
             scrambler_bits: u16,
+            key_size: u16,
         ) -> Server {
-            let mut base = Base::new();
-            let modulus_n = BigUint::parse_bytes(modulus_n.as_bytes(), 16).unwrap();
-            base.generator_g = BigUint::from(generator_g);
-            let mut rng = thread_rng();
-            base.salt = rng.gen_biguint(salt_bits as u64);
-            base.scrambler = rng.gen_biguint(scrambler_bits as u64);
-
-            let salt_hex = base.salt.to_str_radix(16);
-            let hash_input = format!("{}{}:{}", salt_hex, user, password);
-
-            // Set the base identity hash
-            let mut hasher = Sha256::new();
-            hasher.update(hash_input.as_bytes());
-            let hash_result = hasher.finalize();
-            base.identity_hash = BigUint::from_bytes_be(&hash_result);
-                
+            let mut base = Base::new(modulus_n, multiplier_k, generator_g, key_size);
+            base.generate_salt(salt_bits);
+            base.generate_scrambler(scrambler_bits);
+            base.compute_identity_hash(user, password);
 
             let s_verifier = base
                 .generator_g
-                .modpow(&base.identity_hash, &modulus_n);
+                .modpow(&base.identity_hash, &base.modulus_n);
 
-            let mut rng = thread_rng();
-            base.private_key = rng.gen_biguint(128);
+            base.public_key = &base.multiplier_k * &s_verifier
+                + &base.generator_g.modpow(&base.private_key, &base.modulus_n);
 
-            let public_key = &base
-                .multiplier_k
-                * &s_verifier +
-                &base.generator_g.modpow(&base.private_key, &modulus_n);
-            base.public_key = public_key;
-
-            Server {
-                base,
-                modulus_n: modulus_n.clone(),
-                s_verifier,
-            }
+            Server { base, s_verifier }
         }
 
-        pub fn set_session_key(&mut self, public_key: &BigUint) {
+        pub fn compute_session_key(&mut self, public_key: &BigUint) {
             let temp = public_key
-                * &self.s_verifier.modpow(&self.base.scrambler, &self.modulus_n);
-            self.base.session_key = temp.modpow(&self.base.private_key, &self.modulus_n);
+                * &self
+                    .s_verifier
+                    .modpow(&self.base.scrambler, &self.base.modulus_n);
+            self.base.session_key = temp.modpow(&self.base.private_key, &self.base.modulus_n);
         }
 
         pub fn get_identity_hash(&self) -> &BigUint {
@@ -123,11 +135,18 @@ mod srp {
         pub fn get_generator(&self) -> &BigUint {
             &self.base.generator_g
         }
+
+        pub fn get_modulus(&self) -> &BigUint {
+            &self.base.modulus_n
+        }
+
+        pub fn get_verifier(&self) -> &BigUint {
+            &self.s_verifier
+        }
     }
 
     pub struct Client {
         base: Base,
-        modulus_n: BigUint,
     }
 
     impl Client {
@@ -135,49 +154,32 @@ mod srp {
             user: &str,
             password: &str,
             modulus_n: &str,
+            multiplier_k: u32,
             generator_g: u32,
             salt: &BigUint,
+            key_size: u16,
         ) -> Client {
-            let mut base = Base::new();
-            let modulus_n = BigUint::parse_bytes(modulus_n.as_bytes(), 16).unwrap();
-            base.generator_g = BigUint::from(generator_g);
+            let mut base = Base::new(modulus_n, multiplier_k, generator_g, key_size);
+            base.set_salt(salt);
+            base.compute_identity_hash(user, password);
 
-            base.salt = salt.clone();
-            base.session_key = BigUint::zero();
-            
-            let mut rng = thread_rng();
-            base.private_key = rng.gen_biguint(128);
+            base.public_key = base.generator_g.modpow(&base.private_key, &base.modulus_n);
 
-            let public_key = base.generator_g.modpow(&base.private_key, &modulus_n);
-            base.public_key = public_key;
-
-            let salt_hex = base.salt.to_str_radix(16);
-            let hash_input = format!("{}{}:{}", salt_hex, user, password);
-            let mut hasher = Sha256::new();
-            hasher.update(hash_input.as_bytes());
-            let hash_result = hasher.finalize();
-            let identity_hash = BigUint::from_bytes_be(&hash_result);
-            base.identity_hash = identity_hash;
-
-            Client {
-                base,
-                modulus_n: modulus_n.clone(),
-            }
+            Client { base }
         }
 
-        pub fn set_session_key(&mut self, pub_key: &BigUint, scram: &BigUint) {
-            self.base.public_key = pub_key.clone();
+        pub fn compute_session_key(&mut self, pub_key: &BigUint, scram: &BigUint) {
             self.base.scrambler = scram.clone();
             let temp = &self.base.private_key + (&self.base.scrambler * &self.base.identity_hash);
-            let subtraction = pub_key - 
-                &self.base.generator_g.modpow(
-                    &self.base.identity_hash,
-                    &self.modulus_n,
-                ) *
-                &self.base.multiplier_k;
-            self.base.session_key = subtraction.modpow(&temp, &self.modulus_n);
+            let subtraction = pub_key
+                - &self
+                    .base
+                    .generator_g
+                    .modpow(&self.base.identity_hash, &self.base.modulus_n)
+                    * &self.base.multiplier_k;
+            self.base.session_key = subtraction.modpow(&temp, &self.base.modulus_n);
         }
-    
+
         pub fn get_public_key(&self) -> &BigUint {
             &self.base.public_key
         }
@@ -199,37 +201,57 @@ mod srp {
 fn main() {
     let modulus = "115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3";
 
-    let mut srp_server = srp::Server::new("TEST", "test", modulus, 2, 256, 128);
-    let mut srp_client = srp::Client::new("TEST", "test", modulus, 2, srp_server.get_salt());
+    println!("=== SRP6 Demo Started ===");
 
-    srp_server.set_session_key(srp_client.get_public_key());
-    srp_client.set_session_key(
-        srp_server.get_public_key(),
-        srp_server.get_scrambler(),
+    let mut srp_server = srp::Server::new(
+        "TEST",
+        "test",
+        modulus,
+        3,
+        2,
+        128,
+        256,
+        256
     );
 
-    println!("=== SRP6 Demo Started ===");
-    println!("Modulus = {}", srp_server.modulus_n);
+    let mut srp_client = srp::Client::new(
+        "TEST",
+        "test",
+        modulus,
+        3,
+        2,
+        srp_server.get_salt(),
+        256
+    );
+
+    println!("Modulus = {}", srp_server.get_modulus());
     println!("Multiplier = {}", srp_server.get_multiplier());
     println!("Generator = {}", srp_server.get_generator());
     println!("Salt = {}", srp_server.get_salt());
     println!("IdentityHash = {}", srp_server.get_identity_hash());
-    println!("Verifier = {}", srp_server.s_verifier);
-    println!();
-    println!("ServerPrivateKey (b) = {}", srp_server.get_private_key());
-    println!("ServerPublicKey (B) = {}", srp_server.get_public_key());
+    println!("Verifier = {}", srp_server.get_verifier());
     println!("Scrambler (u) = {}", srp_server.get_scrambler());
     println!();
+
+    srp_server.compute_session_key(srp_client.get_public_key());
+    srp_client.compute_session_key(srp_server.get_public_key(), srp_server.get_scrambler());
+
+    println!("ServerPrivateKey (b) = {}", srp_server.get_private_key());
+    println!("ServerPublicKey (B) = {}", srp_server.get_public_key());
+    println!();
     println!("ClientPrivateKey (a) = {}", srp_client.get_private_key());
-    println!("ClientPublicKey (A)= {}", srp_client.get_public_key());
-    println!("ClientIdentityHash (x) = {}", srp_client.get_identity_hash());
+    println!("ClientPublicKey (A) = {}", srp_client.get_public_key());
+    println!(
+        "ClientIdentityHash (x) = {}",
+        srp_client.get_identity_hash()
+    );
     println!();
     println!("ServerSessionKey = {}", srp_server.get_session_key());
     println!("ClientSessionKey = {}", srp_client.get_session_key());
     println!();
     let passed = srp_server.get_session_key() == srp_client.get_session_key();
     println!(
-        "Test Results: {}",
-        if passed { "PASSED!" } else { "FAILED!" }
+        "Session keys{}match!",
+        if passed { " " } else { " DO NOT " }
     );
 }
