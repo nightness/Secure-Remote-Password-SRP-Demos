@@ -1,26 +1,20 @@
 import { sha256 as sha } from "js-sha256";
 //import { sha512 as sha } from 'js-sha512'
-import bigInt = require("big-integer");
-import { BigInteger } from "big-integer";
+// import bigInt = require("big-integer");
+// import { BigInteger } from "big-integer";
 import { assert } from "console";
-
-function newRandomBigInt(bitLength: number) {
-  let text = "";
-  for (let index = 0; index < bitLength; index++)
-    text += Math.random() >= 0.5 ? "0" : "1";
-  return bigInt(text, 2);
-}
+import { BigInt } from "./BigInt";
 
 class SecureRemotePasswordBase {
   // Common variables
-  protected sessionKey = bigInt.zero;
-  protected privateKey = bigInt.zero;
-  protected publicKey = bigInt.zero;
-  protected salt = bigInt.zero;
-  protected multiplier_k = bigInt.zero;
-  protected identityHash = bigInt.zero;
-  protected generator_g = bigInt.zero;
-  protected scrambler = bigInt.zero;
+  protected sessionKey = BigInt.zero;
+  protected privateKey = BigInt.zero;
+  protected publicKey = BigInt.zero;
+  protected salt = BigInt.zero;
+  protected multiplier_k = BigInt.zero;
+  protected identityHash = BigInt.zero;
+  protected generator_g = BigInt.zero;
+  protected scrambler = BigInt.zero;
 
   constructor() {}
 
@@ -59,10 +53,10 @@ class SecureRemotePasswordBase {
 
 class SRP6Server extends SecureRemotePasswordBase {
   // Constructor initialized variables
-  private modulus_N: BigInteger;
+  private modulus_N: BigInt;
 
   // Server calculated variables
-  private sVerifier: BigInteger;
+  private sVerifier: BigInt;
 
   // Server Constructor
   constructor(
@@ -74,25 +68,25 @@ class SRP6Server extends SecureRemotePasswordBase {
     scramblerBits: number
   ) {
     super();
-    this.multiplier_k = bigInt("3"); //SRP6 constant
-    this.modulus_N = bigInt(modulus_N, 16);
-    this.generator_g = bigInt(generator_g);
-    this.salt = newRandomBigInt(saltBits);
-    this.scrambler = newRandomBigInt(scramblerBits);
+    this.multiplier_k = BigInt.from("3"); //SRP6 constant
+    this.modulus_N = BigInt.from(modulus_N, 16);
+    this.generator_g = BigInt.from(generator_g);
+    this.salt = BigInt.random(saltBits);
+    this.scrambler = BigInt.random(scramblerBits);
 
-    assert(this.scrambler > bigInt.zero, "scrambler invalid");
-    assert(this.multiplier_k > bigInt.zero, "multiplier_k invalid");
-    assert(this.generator_g > bigInt.zero, "generator_g invalid");
-    assert(this.modulus_N > bigInt.zero, "modulus_N invalid");
-    assert(this.salt > bigInt.zero, "salt invalid");
+    assert(this.scrambler.greater(BigInt.zero), "scrambler invalid");
+    assert(this.multiplier_k.greater(BigInt.zero), "multiplier_k invalid");
+    assert(this.generator_g.greater(BigInt.zero), "generator_g invalid");
+    assert(this.modulus_N.greater(BigInt.zero), "modulus_N invalid");
+    assert(this.salt.greater(BigInt.zero), "salt invalid");
 
     // Server-side variables
     const hash = sha(`${this.salt.toString(16)}${user}:${password}`);
-    this.identityHash = bigInt(hash, 16);
+    this.identityHash = BigInt.from(hash, 16);
     this.sVerifier = this.generator_g.modPow(this.identityHash, this.modulus_N);
 
     // Keys
-    this.privateKey = newRandomBigInt(256);
+    this.privateKey = BigInt.random(256);
 
     // kv + g^b   (mod N)
     this.publicKey = this.multiplier_k
@@ -100,7 +94,7 @@ class SRP6Server extends SecureRemotePasswordBase {
       .add(this.generator_g.modPow(this.privateKey, this.modulus_N));
   }
 
-  public setSessionKey(publicKey: BigInteger) {
+  public setSessionKey(publicKey: BigInt) {
     this.sessionKey = publicKey
       .multiply(this.sVerifier.modPow(this.scrambler, this.modulus_N))
       .modPow(this.privateKey, this.modulus_N);
@@ -121,7 +115,7 @@ class SRP6Server extends SecureRemotePasswordBase {
 
 class SRP6Client extends SecureRemotePasswordBase {
   // Constructor initialized variables
-  private modulus_N: BigInteger;
+  private modulus_N: BigInt;
 
   // Client Constructor
   constructor(
@@ -129,30 +123,30 @@ class SRP6Client extends SecureRemotePasswordBase {
     password: string,
     modulus_N: string,
     generator_g: number,
-    salt: BigInteger
+    salt: BigInt
   ) {
     super();
-    this.multiplier_k = bigInt("3"); //SRP6 constant
-    this.modulus_N = bigInt(modulus_N, 16);
-    this.generator_g = bigInt(generator_g);
+    this.multiplier_k = BigInt.from("3"); //SRP6 constant
+    this.modulus_N = BigInt.from(modulus_N, 16);
+    this.generator_g = BigInt.from(generator_g);
     this.salt = salt;
-    this.sessionKey = bigInt.zero;
+    this.sessionKey = BigInt.zero;
 
-    assert(this.multiplier_k > bigInt.zero, "multiplier_k invalid");
-    assert(this.generator_g > bigInt.zero, "generator_g invalid");
-    assert(this.modulus_N > bigInt.zero, "modulus_N invalid");
-    assert(this.salt > bigInt.zero, "salt invalid");
+    assert(this.multiplier_k.greater(BigInt.zero), "multiplier_k invalid");
+    assert(this.generator_g.greater(BigInt.zero), "generator_g invalid");
+    assert(this.modulus_N.greater(BigInt.zero), "modulus_N invalid");
+    assert(this.salt.greater(BigInt.zero), "salt invalid");
 
-    this.privateKey = newRandomBigInt(128);
+    this.privateKey = BigInt.random(128);
     // g^a   (mod N)
     this.publicKey = this.generator_g.modPow(this.privateKey, this.modulus_N);
 
     // Identity Hash
     const hash = sha(`${this.salt.toString(16)}${user}:${password}`);
-    this.identityHash = bigInt(hash, 16);
+    this.identityHash = BigInt.from(hash, 16);
   }
 
-  public setSessionKey(pubKey: BigInteger, scram: BigInteger) {
+  public setSessionKey(pubKey: BigInt, scram: BigInt) {
     this.scrambler = scram;
     const temp = this.privateKey.add(
       this.scrambler.multiply(this.identityHash)
@@ -171,12 +165,12 @@ class SRP6Client extends SecureRemotePasswordBase {
 const modulus =
   "115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3";
 
-const srpServer = new SRP6Server("TEST", "test", modulus, 420, 256, 128);
+const srpServer = new SRP6Server("TEST", "test", modulus, 3, 256, 128);
 const srpClient = new SRP6Client(
   "TEST",
   "test",
   modulus,
-  420,
+  3,
   srpServer.getSalt()
 );
 
@@ -185,23 +179,24 @@ srpServer.setSessionKey(srpClient.getPublicKey());
 srpClient.setSessionKey(srpServer.getPublicKey(), srpServer.getScrambler());
 
 console.log("=== SRP6 Demo Started ===");
-console.log("Modulus =", srpServer.getModulus());
-console.log("Multiplier =", srpServer.getMultiplier());
-console.log("Generator= ", srpServer.getGenerator());
-console.log("Salt =", srpServer.getSalt());
-console.log("IdentityHash =", srpServer.getIdentityHash());
-console.log("Verifier =", srpServer.getVerifier());
+console.log("Modulus =", srpServer.getModulus().toString());
+console.log("Multiplier =", srpServer.getMultiplier().toString());
+console.log("Generator= ", srpServer.getGenerator().toString());
+console.log("Salt =", srpServer.getSalt().toString());
+console.log("IdentityHash =", srpServer.getIdentityHash().toString());
+console.log("Verifier =", srpServer.getVerifier().toString());
 console.log("");
-console.log("ServerPrivateKey (b) =", srpServer.getPrivateKey());
-console.log("ServerPublicKey (B) = ", srpServer.getPublicKey());
-console.log("Scrambler (u)=", srpServer.getScrambler());
+console.log("ServerPrivateKey (b) =", srpServer.getPrivateKey().toString());
+console.log("ServerPublicKey (B) = ", srpServer.getPublicKey().toString());
+console.log("Scrambler (u)=", srpServer.getScrambler().toString());
 console.log("");
-console.log("ClientPrivateKey (a) =", srpClient.getPrivateKey());
-console.log("ClientPublicKey (A)=", srpClient.getPublicKey());
-console.log("ClientIdentityHash (x) =", srpClient.getIdentityHash());
+console.log("ClientPrivateKey (a) =", srpClient.getPrivateKey().toString());
+console.log("ClientPublicKey (A)=", srpClient.getPublicKey().toString());
+console.log("ClientIdentityHash (x) =", srpClient.getIdentityHash().toString());
 console.log("");
-console.log("ServerSessionKey =", srpServer.getSessionKey());
-console.log("ClientSessionKey =", srpClient.getSessionKey());
+console.log("ServerSessionKey =", srpServer.getSessionKey().toString());
+console.log("ClientSessionKey =", srpClient.getSessionKey().toString());
 console.log("");
+
 const passed = srpServer.getSessionKey().equals(srpClient.getSessionKey());
 console.log(`Test Results: ${passed ? "PASSED!" : "FAILED!"}`);
