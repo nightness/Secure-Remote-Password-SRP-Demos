@@ -17,6 +17,6 @@
     "js-sha512": "^0.8.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.25"
+    "@types/node": "^18"
   }
 }
