@@ -10,6 +10,8 @@ npm-debug.*
 *.js
 web-build/
 *.log
+*.class
+*.ctxt
 
 # macOS
 .DS_Store
