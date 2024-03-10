@@ -146,7 +146,6 @@ class SRP6Client extends SRP6Base {
   }
 
   public setSessionKey(pubKey: BigInteger, scram: BigInteger) {
-    this.publicKey = pubKey;
     this.scrambler = scram;
     const temp = this.privateKey.add(
       this.scrambler.multiply(this.identityHash)
