@@ -1,21 +1,24 @@
 {
-    "name": "srp6-typescript",
-    "version": "1.0.0",
-    "description": "",
-    "main": "srp6.js",
-    "scripts": {
-        "test": "tsc && node srp6.js"
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "big-integer": "^1.6.48",
-        "js-sha256": "^0.9.0",
-        "js-sha512": "^0.8.0",
-        "sha1": "^1.1.1"
-    },
-    "devDependencies": {
-        "@types/node": "^15.12.2",
-        "@types/sha1": "^1.1.2"
-    }
+  "name": "srp6-typescript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "srp6.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "tsc && node srp6.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "big-integer": "^1.6.48",
+    "js-sha256": "^0.9.0",
+    "js-sha512": "^0.8.0",
+    "sha1": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.25",
+    "@types/sha1": "^1.1.2"
+  }
 }
