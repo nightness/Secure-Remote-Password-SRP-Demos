@@ -17,3 +17,5 @@ web-build/
 .DS_Store
 
 target/
+obj/
+bin/
