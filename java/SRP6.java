@@ -19,7 +19,7 @@ public class SRP6
     // Common variables
     BigInteger sessionKey, privateKey, publicKey;
 
-    public static void test()
+    public static void main(String[] args)    
     {
         String modulus = "115b8b692e0e045692cf280b436735c77a5a9e8a9e7ed56c965f87db5b2a2ece3";
         
@@ -246,5 +246,5 @@ public class SRP6
     {
         return new BigInteger(bytesToHex(bytes), 16);
     }
-    
+
 }
