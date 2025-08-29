@@ -19,7 +19,7 @@ namespace SRP6
         public static BigInteger CreateSaltedIdentityHash(this BigInteger salt, byte[] identityHash)
         {
             return BigIntegerExtensions.CreateBigInteger(
-                Concatenate(salt.ToByteArray(), identityHash).Sha1Hash().ToHexString(), 16);
+                Concatenate(salt.ToByteArray(), identityHash).Sha3Hash().ToHexString(), 16);
         }
 
         /// <summary>

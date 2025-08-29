@@ -21,46 +21,23 @@ namespace Program
 
         static void Main(string[] args)
         {
+            // Run SHA3 tests if requested
+            if (args.Length > 0 && args[0].ToLower() == "sha3test")
+            {
+                Console.WriteLine("Running SHA3 tests...");
+                Environment.Exit(SHA3Test.RunSHA3Tests() ? 0 : 1);
+                return;
+            }
+
             Console.WriteLine("=== SRP6 Demo ===");
 
             // The modulus is a safe prime number that both client and server know before authentication.
 			String modulus = "20E176988FD33DE7AE0D296BF805A49F3F45B92FB59036DCC9F0624B89B2DB67";
 
-            // The modulus above is a safe prime, but ask if the demo user wants to generate a new safe prime instead.
-			Console.Write("Generate a random safe prime (y/N)? ");
-			if (GetKey() == ConsoleKey.Y)
-            {
-				Console.WriteLine();
-				Console.Write("Generating a safe prime, this may take a few seconds or a few minutes...");
-				modulus = GenerateSafePrime();
-                Console.WriteLine();
-                Console.Write("Modulus is now \"" + modulus + "\"");
-			}
             Console.WriteLine(Environment.NewLine);
 
-            // An agressive test performs multiple iterations of RunTest, checking just for matching session keys.
-            // The Username and Password are altered for each iteration.
-			Console.Write("Aggressive testing (y/N)? ");
-			if (GetKey() == ConsoleKey.Y)
-			{
-				int amount = GetIterationCount();
-				for (int i = 0; i < amount; i++)
-				{
-                    Username = GenerateRandomString();
-                    Password = GenerateRandomString();
-					if (!RunTest(modulus, true))
-					{
-						Console.WriteLine("Iteration #" + (i+1) + " Failed!!!");
-						return;
-					}
-                    Console.WriteLine("Iteration #" + (i+1) + " Passed.");
-				}
-				Console.WriteLine("Success!");
-			} 
-			else 
-			{
-				RunTest(modulus);
-			}
+            // Run the test automatically without user input
+            RunTest(modulus);
         }
 
 		private static ConsoleKey GetKey()
@@ -79,7 +56,7 @@ namespace Program
             while (true)
 			{
                 Console.Write("How many iterations? ");
-                string textAmount = Console.ReadLine();
+                string? textAmount = Console.ReadLine();
                 try
 				{                   
                     int count = Convert.ToInt32(textAmount);
@@ -118,7 +95,7 @@ namespace Program
             //
             // The identity hash is generated and sent by the client (for each new session), and saved on the
             // server (so username and password isn't).
-            byte[] identityHash = Encoding.Unicode.GetBytes((Username + ":" + Password)).Sha1Hash();
+            byte[] identityHash = Encoding.Unicode.GetBytes((Username + ":" + Password)).Sha3Hash();
 
 			// Server generates (and sends to client) public-key, scrambler, and salt
 			var srpServer = new Srp6(identityHash, modulus, Generator, SaltBitLength, ScramblerBitLength);

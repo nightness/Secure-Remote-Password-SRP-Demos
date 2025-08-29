@@ -184,7 +184,7 @@ namespace SRP6
         #endregion
 
         #region Set Session Key
-        public void SetSessionKey(String pubKeyString, String scrambler = null)
+        public void SetSessionKey(String pubKeyString, String? scrambler = null)
         {
             BigInteger pubKey = BigIntegerExtensions.CreateBigInteger(pubKeyString, 16);
             if (IsServerInstance)       // Server SessionKey
@@ -194,6 +194,8 @@ namespace SRP6
             }
             else                        // Client SessionKey
             {
+                if (scrambler == null)
+                    throw new ArgumentNullException(nameof(scrambler), "Scrambler cannot be null for client session key calculation");
                 Scrambler = BigIntegerExtensions.CreateBigInteger(scrambler, 16);
                 BigInteger temp = PrivateKey.Add(Scrambler.Multiply(SaltedIdentityHash));
                 SessionKey = pubKey.Subtract((Generator.ModPow(SaltedIdentityHash, Modulus))
@@ -225,8 +227,16 @@ namespace SRP6
         public Stream Encrypt(Stream stream)
         {
             var results = new byte[stream.Length];
-            stream.Read(results, 0, results.Length);
-            byte[] encryptedBytes = Encrypt(results);
+            int totalBytesRead = 0;
+            int bytesRead;
+            while (totalBytesRead < results.Length)
+            {
+                bytesRead = stream.Read(results, totalBytesRead, results.Length - totalBytesRead);
+                if (bytesRead == 0)
+                    break;
+                totalBytesRead += bytesRead;
+            }
+            byte[] encryptedBytes = Encrypt(results.AsSpan(0, totalBytesRead).ToArray());
             return new MemoryStream(encryptedBytes, false);
         }
 
@@ -240,12 +250,13 @@ namespace SRP6
             string password = SessionKey.ToHexString();
             string salt = Salt.ToHexString();
             if(plainTextBytes == null)
-                return null;
+                return Array.Empty<byte>();
             byte[] initialVectorBytes = Encoding.ASCII.GetBytes(InitialVector);
             byte[] saltValueBytes = Encoding.ASCII.GetBytes(salt);
             var derivedPassword = new PasswordDeriveBytes(password, saltValueBytes, HashAlgorithm, PasswordIterations);
             byte[] keyBytes = derivedPassword.GetBytes(KeySize / 8);
-            var symmetricKey = new RijndaelManaged { Mode = CipherMode.CBC };
+            using var symmetricKey = Aes.Create();
+            symmetricKey.Mode = CipherMode.CBC;
             byte[] cipherTextBytes;
             using(var encryptor = symmetricKey.CreateEncryptor(keyBytes, initialVectorBytes))
             {
@@ -261,7 +272,6 @@ namespace SRP6
                     }
                 }
             }
-            symmetricKey.Clear();
             return cipherTextBytes;
         }
         #endregion
@@ -289,8 +299,16 @@ namespace SRP6
         public Stream Decrypt(Stream stream)
         {
             var results = new byte[stream.Length];
-            stream.Read(results, 0, results.Length);
-            byte[] decryptedBytes = Decrypt(results);
+            int totalBytesRead = 0;
+            int bytesRead;
+            while (totalBytesRead < results.Length)
+            {
+                bytesRead = stream.Read(results, totalBytesRead, results.Length - totalBytesRead);
+                if (bytesRead == 0)
+                    break;
+                totalBytesRead += bytesRead;
+            }
+            byte[] decryptedBytes = Decrypt(results.AsSpan(0, totalBytesRead).ToArray());
             return new MemoryStream(decryptedBytes, false);
         }
 
@@ -302,7 +320,7 @@ namespace SRP6
         public byte[] Decrypt(byte[] cipherTextBytes)
         {
             if(cipherTextBytes == null)
-                return null;
+                return Array.Empty<byte>();
             int byteCount;
             byte[] decryptedArray = Decrypt(cipherTextBytes, out byteCount);
             return decryptedArray.SubArray(0, byteCount);
@@ -315,13 +333,14 @@ namespace SRP6
             if(cipherTextBytes == null)
             {
                 byteCount = 0;
-                return null;
+                return Array.Empty<byte>();
             }
             byte[] initialVectorBytes = Encoding.ASCII.GetBytes(InitialVector);
             byte[] saltValueBytes = Encoding.ASCII.GetBytes(salt);
             var derivedPassword = new PasswordDeriveBytes(password, saltValueBytes, HashAlgorithm, PasswordIterations);
             var keyBytes = derivedPassword.GetBytes(KeySize / 8);
-            var symmetricKey = new RijndaelManaged { Mode = CipherMode.CBC };
+            using var symmetricKey = Aes.Create();
+            symmetricKey.Mode = CipherMode.CBC;
             var plainTextBytes = new byte[cipherTextBytes.Length];
             using(var decryptor = symmetricKey.CreateDecryptor(keyBytes, initialVectorBytes))
             {
@@ -336,7 +355,6 @@ namespace SRP6
                     }
                 }
             }
-            symmetricKey.Clear();
             return plainTextBytes;
         }
         #endregion

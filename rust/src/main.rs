@@ -1,12 +1,14 @@
 extern crate num_bigint;
 extern crate rand;
-extern crate sha2;
+
+mod sha3_custom;
+mod sha3_test;
 
 mod srp {
     use num_bigint::{BigUint, RandBigInt};
     use num_traits::Zero;
     use rand::thread_rng;
-    use sha2::{Digest, Sha256};
+    use crate::sha3_custom::SHA3_256;
 
     struct Base {
         modulus_n: BigUint,
@@ -58,10 +60,8 @@ mod srp {
         pub fn compute_identity_hash(&mut self, user: &str, password: &str) {
             let salt_hex = self.salt.to_str_radix(16);
             let hash_input = format!("{}{}:{}", salt_hex, user, password);
-            let mut hash = Sha256::new();
-            hash.update(hash_input.as_bytes());
-            let hash_result = hash.finalize();
-            self.identity_hash = BigUint::from_bytes_be(&hash_result);
+            let hash_hex = SHA3_256::hash_string(&hash_input);
+            self.identity_hash = BigUint::parse_bytes(hash_hex.as_bytes(), 16).unwrap_or_default();
         }
     }
 

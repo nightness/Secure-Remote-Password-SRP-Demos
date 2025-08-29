@@ -63,7 +63,7 @@ public class SRP6
         this.scrambler = new BigInteger(scramblerBits, new Random());
         
         // Server-side variables
-        sIdentityHash = bytesToBig(hash(bigToByteArray(salt), hash(new String(user + ":" + password).getBytes())));
+        sIdentityHash = bytesToBig(SHA3Util.sha3Hash(bigToByteArray(salt), SHA3Util.sha3Hash(new String(user + ":" + password).getBytes())));
         
         sVerifier = this.generator_g.modPow(sIdentityHash, this.modulus_N);        
         
@@ -89,7 +89,7 @@ public class SRP6
         publicKey = this.generator_g.modPow(privateKey, this.modulus_N);
         
         // Server-side variables
-        sIdentityHash = bytesToBig(hash(bigToByteArray(this.salt), hash(new String(user + ":" + password).getBytes())));
+        sIdentityHash = bytesToBig(SHA3Util.sha3Hash(bigToByteArray(this.salt), SHA3Util.sha3Hash(new String(user + ":" + password).getBytes())));
 
     }
 
